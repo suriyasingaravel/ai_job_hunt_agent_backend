@@ -1,11 +1,8 @@
 services:
-  # =========================
-  # Backend: FastAPI + SQLite/Chroma
-  # =========================
   - type: web
     name: ai-job-agent-backend
     env: python
-    plan: free
+    plan: free # no disk allowed
     rootDir: backend
     autoDeploy: true
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
@@ -18,25 +15,18 @@ services:
         value: gemini
       - key: GEMINI_EMBEDDINGS_MODEL
         value: models/embedding-001
+      # put DB & Chroma in ephemeral /tmp
       - key: DATA_DIR
-        value: /var/data
+        value: /tmp/data
       - key: SQLITE_URL
-        value: sqlite:////var/data/ai_job_agent.db
+        value: sqlite:////tmp/data/ai_job_agent.db
       - key: CHROMA_DIR
-        value: /var/data/chroma_store
-      # ---- Secrets: set in Render UI after importing this blueprint ----
+        value: /tmp/data/chroma_store
       - key: GOOGLE_API_KEY
-        sync: false # add value in Render → Environment
+        sync: false
       - key: SERPAPI_KEY
-        sync: false # optional; add only if you use SerpAPI
-    disk:
-      name: data
-      mountPath: /var/data
-      sizeGB: 5
+        sync: false
 
-  # =========================
-  # Frontend: Streamlit
-  # =========================
   - type: web
     name: ai-job-agent-frontend
     env: python
@@ -47,9 +37,8 @@ services:
     startCommand: streamlit run app.py --server.port 10000 --server.address 0.0.0.0
     healthCheckPath: /
     envVars:
-      # Point frontend to the backend’s public URL automatically
-      - key: API_URL
+      - key: BACKEND_HOST
         fromService:
           type: web
           name: ai-job-agent-backend
-          property: url
+          property: host
