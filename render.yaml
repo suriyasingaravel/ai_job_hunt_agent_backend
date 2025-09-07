@@ -1,0 +1,55 @@
+services:
+  # =========================
+  # Backend: FastAPI + SQLite/Chroma
+  # =========================
+  - type: web
+    name: ai-job-agent-backend
+    env: python
+    plan: free
+    rootDir: backend
+    autoDeploy: true
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn ai_job_agent.apps.api.main:app --app-dir src --host 0.0.0.0 --port 10000
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONPATH
+        value: src
+      - key: EMBEDDINGS_PROVIDER
+        value: gemini
+      - key: GEMINI_EMBEDDINGS_MODEL
+        value: models/embedding-001
+      - key: DATA_DIR
+        value: /var/data
+      - key: SQLITE_URL
+        value: sqlite:////var/data/ai_job_agent.db
+      - key: CHROMA_DIR
+        value: /var/data/chroma_store
+      # ---- Secrets: set in Render UI after importing this blueprint ----
+      - key: GOOGLE_API_KEY
+        sync: false # add value in Render → Environment
+      - key: SERPAPI_KEY
+        sync: false # optional; add only if you use SerpAPI
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 5
+
+  # =========================
+  # Frontend: Streamlit
+  # =========================
+  - type: web
+    name: ai-job-agent-frontend
+    env: python
+    plan: free
+    rootDir: frontend
+    autoDeploy: true
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port 10000 --server.address 0.0.0.0
+    healthCheckPath: /
+    envVars:
+      # Point frontend to the backend’s public URL automatically
+      - key: API_URL
+        fromService:
+          type: web
+          name: ai-job-agent-backend
+          property: url
