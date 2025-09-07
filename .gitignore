@@ -1,6 +1,8 @@
 # --- OS junk ---
 .DS_Store
 Thumbs.db
+.env
+.env.example
 
 # --- Python / build ---
 __pycache__/
